@@ -2,23 +2,16 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 
 from bs4 import BeautifulSoup
-import time
-import pandas as pd
 import json
 
 
 class PinterestParser:
-    def __init__(self, query, scrollnum=1, sleeptimer=10):
+    def __init__(self, query):
         self.query = query
-        self.scrollnum = scrollnum
-        self.sleeptimer = sleeptimer
-
         options = webdriver.ChromeOptions()
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
         self.driver = webdriver.Chrome(options=options)
-
         self.driver.get(f'https://ru.pinterest.com/search/pins/?q={self.query}')
-        time.sleep(10)
 
     def find_by_xpath(self, obj, attr, name):
         xpath = f"//{obj}[@{attr}='{name}']"
@@ -37,8 +30,6 @@ class PinterestParser:
         submit_button = self.find_by_xpath("button", "type", "submit")
         submit_button.click()
 
-        time.sleep(10)
-
     def scroll(self):
         self.driver.execute_script("window.scrollTo(1,100000)")
         print("scroll-down")
@@ -53,35 +44,12 @@ class PinterestParser:
         for link in soup.findAll('img')[1:]:
             srcset = link.get('srcset')
             # get last link from srcset
-            src = srcset.split(' ')[-2]
+            src = srcset.split(' ')[-2] if srcset else link.get('src')
             prompt = link.get('alt')
             data["src"].append(src)
             data["prompt"].append(prompt)
         return data
 
     def save_data(self, filename, data):
-        ext = filename.split(".")[-1]
-        if ext == "json":
-            with open(filename, 'w') as f:
-                json.dump(data, f)
-        elif ext == "csv":
-            df = pd.DataFrame(data)
-            df.to_csv(filename)
-        else:
-            print("Unknown extention")
-
-
-if __name__ == "__main__":
-    parser = PinterestParser("khokhloma")
-    parser.authorize("login", "password")
-    for _ in range(3):
-        parser.scroll()
-        time.sleep(10)
-        data = parser.get_data()
-        parser.save_data(f"dataset_{_}.csv", data)
-
-
-# for link in soup.findAll('a'):
-#     pin = link.get('href')
-#     if 'pin/' in pin:
-#         print(pin)
+        with open(f"{filename}.json", 'w') as f:
+            json.dump(data, f)
